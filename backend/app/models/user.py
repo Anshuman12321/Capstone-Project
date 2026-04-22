@@ -18,5 +18,6 @@ class User(BaseModel):
 
     user_id: UUID = Field(default_factory=uuid4)
     username: str = Field(min_length=1, max_length=32)
+    game_ids: list[UUID] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

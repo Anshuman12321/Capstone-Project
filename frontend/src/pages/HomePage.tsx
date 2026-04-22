@@ -1,65 +1,75 @@
-import { useEffect, useState } from 'react'
-
-type HelloResponse = { message: string }
+import { useState } from 'react'
+import { useApp } from '../AppState'
 
 export function HomePage() {
-  const [data, setData] = useState<HelloResponse | null>(null)
+  const { user, game, team, setGame, showToast } = useApp()
+  const [simulating, setSimulating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/hello')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<HelloResponse>
-      })
-      .then((json) => {
-        if (!cancelled) {
-          setData(json)
-          setError(null)
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Request failed')
-          setData(null)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+  const simulateWeek = async () => {
+    if (!game) return
+    setSimulating(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/games/${game.game_id}/simulate/next-week`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      setGame(await res.json())
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSimulating(false)
     }
-  }, [])
+  }
 
   return (
     <div className="page">
       <header className="page-header">
-        <h1>Fantasy League</h1>
+        <h1>{game?.name || "Fantasy Hoops Dashboard"}</h1>
         <p className="lede">
-          Navigate with the menu above to manage your draft settings, roster, and
-          check the league table. The frontend handles all interaction and
-          presentation; the API powers live data as you connect it.
+          Welcome back, {user?.username}. You are managing <strong>{team?.name}</strong>.
+          <br />
+          <span style={{ fontSize: '0.875rem' }} className="muted">Game ID to Share: {game?.game_id}</span>
         </p>
       </header>
 
-      <section className="card" aria-live="polite">
-        <h2>API status</h2>
-        {loading && <p className="muted">Checking backend…</p>}
-        {!loading && error && (
-          <p className="error-msg">
-            Could not reach the backend ({error}). Start it with{' '}
-            <code>uvicorn main:app --reload</code> from <code>backend</code>.
+      <div className="grid-2">
+        <section className="card">
+          <h2>Game Status</h2>
+          <p style={{ marginBottom: '1rem' }}>
+            <span className="pill" style={{ background: 'var(--accent-secondary)' }}>{game?.status.toUpperCase()}</span>
           </p>
+          <p><strong>Current Week:</strong> {game?.current_week}</p>
+          <p><strong>Max Teams:</strong> {game?.settings.max_teams}</p>
+        </section>
+
+        {game?.owner_user_id === user?.user_id && (
+          <section className="card">
+            <h2>Simulate Season</h2>
+            <p className="muted" style={{ marginBottom: '1.5rem' }}>
+              Advance the current week and let the backend simulation engine crunch numbers and stats.
+            </p>
+            {error && <p className="error-msg">{error}</p>}
+            <button
+              className="btn-primary"
+              onClick={simulateWeek}
+              disabled={simulating || game?.status !== 'drafting' && game?.status !== 'in_progress'}
+            >
+              {simulating ? 'Simulating...' : 'Simulate Next Week'}
+            </button>
+          </section>
         )}
-        {!loading && !error && data && (
-          <p className="ok-msg">
-            <code>/api/hello</code> → {data.message}
-          </p>
+        {game?.owner_user_id === user?.user_id && (
+          <section className="card">
+            <h2>League Settings</h2>
+            <p className="muted" style={{ marginBottom: '1.5rem' }}>
+              Modify league mechanics, pause the draft, or transfer ownership. (Stub)
+            </p>
+            <button className="btn-secondary" onClick={() => showToast("Settings updated (Stub)", "success")}>
+              Save Settings
+            </button>
+          </section>
         )}
-      </section>
+      </div>
     </div>
   )
 }

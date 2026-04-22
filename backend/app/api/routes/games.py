@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/games", tags=["games"])
 
 class CreateGameRequest(BaseModel):
     owner_user_id: UUID | None = None
+    name: str = Field(default="My League", max_length=60)
     settings: GameSettings | None = None
 
 
@@ -35,7 +36,7 @@ class GameLogQuery(BaseModel):
 
 @router.post("", response_model=Game)
 def create_game(req: CreateGameRequest) -> Game:
-    return GAME_SERVICE.create_game(owner_user_id=req.owner_user_id, settings=req.settings)
+    return GAME_SERVICE.create_game(owner_user_id=req.owner_user_id, name=req.name, settings=req.settings)
 
 
 @router.get("", response_model=list[Game])
@@ -104,4 +105,14 @@ def simulate_next_week(game_id: UUID) -> Game:
         return GAME_SERVICE.simulate_next_week(game_id=game_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="Game not found")
+
+@router.post("/{game_id}/trade", response_model=dict)
+def propose_trade(game_id: UUID) -> dict:
+    """Stubbed trade proposal."""
+    return {"status": "success", "message": "Trade proposed successfully! (Stub)"}
+
+@router.post("/{game_id}/transactions", response_model=dict)
+def add_drop_player(game_id: UUID) -> dict:
+    """Stubbed add/drop capability."""
+    return {"status": "success", "message": "Waiver transaction complete! (Stub)"}
 

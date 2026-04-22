@@ -1,13 +1,25 @@
-import { standings } from '../mockData'
+import { useApp } from '../AppState'
 
 export function StandingsPage() {
+  const { user, game } = useApp()
+
+  if (!game) return null;
+
+  const teamsList = Object.values(game.teams_by_user_id || {}) as any[];
+
+  // Sort teams by standings, or if empty just by name
+  const sortedTeams = [...teamsList].sort((a, b) => {
+    const winsA = game.standings[a.owner_user_id] || 0;
+    const winsB = game.standings[b.owner_user_id] || 0;
+    return winsB - winsA; // Highest wins first
+  });
+
   return (
     <div className="page">
       <header className="page-header">
         <h1>League standings</h1>
         <p className="lede">
-          Regular season · sorted by wins, then points for. Connect this table to
-          your API for live scores and playoff seeding.
+          Regular season · Week {game.current_week}.
         </p>
       </header>
 
@@ -18,27 +30,26 @@ export function StandingsPage() {
               <tr>
                 <th>Rank</th>
                 <th>Team</th>
-                <th>Owner</th>
-                <th>W–L–T</th>
-                <th>PF</th>
-                <th>PA</th>
-                <th>Streak</th>
+                <th>Wins</th>
+                <th>Losses</th>
+                <th>Format</th>
               </tr>
             </thead>
             <tbody>
-              {standings.map((row) => (
-                <tr key={row.team} className={row.owner === 'You' ? 'highlight-row' : undefined}>
-                  <td>{row.rank}</td>
-                  <td className="name">{row.team}</td>
-                  <td>{row.owner}</td>
-                  <td>
-                    {row.w}–{row.l}–{row.t}
-                  </td>
-                  <td>{row.pf.toFixed(1)}</td>
-                  <td>{row.pa.toFixed(1)}</td>
-                  <td>{row.streak}</td>
-                </tr>
-              ))}
+              {sortedTeams.map((t, i) => {
+                const wins = game.standings[t.owner_user_id] || 0;
+                const losses = Math.max(0, game.current_week - wins);
+
+                return (
+                  <tr key={t.team_id} className={t.owner_user_id === user?.user_id ? 'highlight-row' : undefined}>
+                    <td>{i + 1}</td>
+                    <td className="name">{t.name}</td>
+                    <td>{wins}</td>
+                    <td>{losses}</td>
+                    <td>H2H / Points</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

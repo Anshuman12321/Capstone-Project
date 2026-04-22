@@ -17,10 +17,15 @@ class CreateUserRequest(BaseModel):
 
 @router.post("", response_model=User)
 def create_user(req: CreateUserRequest) -> User:
-    user = User(username=req.username)
     with STORE._lock:
+        # Check if username exists
+        for existing_user in STORE.users.values():
+            if existing_user.username.lower() == req.username.lower():
+                return existing_user
+                
+        user = User(username=req.username)
         STORE.users[user.user_id] = user
-    return user
+        return user
 
 
 @router.get("/{user_id}", response_model=User)

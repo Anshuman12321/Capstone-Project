@@ -18,10 +18,13 @@ class GameService:
     Future: add persistence + real simulation + multiplayer synchronization.
     """
 
-    def create_game(self, owner_user_id: UserId | None, settings: GameSettings | None) -> Game:
-        game = Game(owner_user_id=owner_user_id, settings=settings or GameSettings())
+    def create_game(self, owner_user_id: UserId | None, name: str, settings: GameSettings | None) -> Game:
+        game = Game(owner_user_id=owner_user_id, name=name, settings=settings or GameSettings())
         with STORE._lock:
             STORE.games[game.game_id] = game
+            if owner_user_id and owner_user_id in STORE.users:
+                user = STORE.users[owner_user_id]
+                STORE.users[owner_user_id] = user.model_copy(update={"game_ids": [*user.game_ids, game.game_id]})
         return game
 
     def list_games(self) -> list[Game]:
@@ -61,6 +64,11 @@ class GameService:
                 }
             )
             STORE.games[game_id] = next_game
+            
+            if user_id in STORE.users:
+                user = STORE.users[user_id]
+                if game_id not in user.game_ids:
+                    STORE.users[user_id] = user.model_copy(update={"game_ids": [*user.game_ids, game_id]})
             return next_game
 
     def start_draft(self, game_id: GameId) -> Game:
