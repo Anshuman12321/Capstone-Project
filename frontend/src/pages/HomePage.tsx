@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiUrl } from '../lib/api'
 
 type HelloResponse = { message: string }
 
@@ -9,7 +10,7 @@ export function HomePage() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/hello')
+    fetch(apiUrl('/api/hello'))
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json() as Promise<HelloResponse>
