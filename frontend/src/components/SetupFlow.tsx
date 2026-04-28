@@ -83,7 +83,7 @@ export function SetupFlow() {
     return (
         <div className="auth-wrapper">
             <div className="card auth-card">
-                <h1>Welcome to Fantasy Hoops</h1>
+                <h1>Welcome to Banana Ball</h1>
                 <p className="lede" style={{ fontSize: '1rem', marginBottom: '2rem' }}>
                     Get ready to draft your ultimate NBA squad.
                 </p>

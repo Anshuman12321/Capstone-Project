@@ -31,7 +31,7 @@ export function LoginView() {
     return (
         <div className="auth-wrapper">
             <div className="card auth-card">
-                <h1>Welcome to Fantasy Hoops</h1>
+                <h1>Welcome to Banana Ball</h1>
                 <p className="lede" style={{ fontSize: '1rem', marginBottom: '2rem' }}>
                     Log in with your GM name to manage your franchise.
                 </p>

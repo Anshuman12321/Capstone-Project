@@ -24,7 +24,7 @@ export function HomePage() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>{game?.name || "Fantasy Hoops Dashboard"}</h1>
+        <h1>{game?.name || "Banana Ball Dashboard"}</h1>
         <p className="lede">
           Welcome back, {user?.username}. You are managing <strong>{team?.name}</strong>.
           <br />

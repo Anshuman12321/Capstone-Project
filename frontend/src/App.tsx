@@ -40,7 +40,7 @@ export default function App() {
         <div className="brand" style={{ cursor: 'pointer' }} onClick={() => { if (user && game) handleBackToLobby() }}>
           <span className="brand-mark" aria-hidden="true" />
           <div>
-            <span className="brand-title">Fantasy Hoops</span>
+            <span className="brand-title">Banana Ball</span>
             <span className="brand-sub">Capstone</span>
           </div>
         </div>
