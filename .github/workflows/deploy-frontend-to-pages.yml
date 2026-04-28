@@ -35,11 +35,21 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Compute base path
+        run: |
+          if [ -n "${BASE_PATH_OVERRIDE}" ]; then
+            echo "BASE_PATH=${BASE_PATH_OVERRIDE}" >> "$GITHUB_ENV"
+          else
+            echo "BASE_PATH=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
+          fi
+        env:
+          # Optional override. Set repo variable BASE_PATH to "/" when using a custom domain.
+          BASE_PATH_OVERRIDE: ${{ vars.BASE_PATH }}
+
       - name: Build
         working-directory: frontend
         env:
-          # GitHub Pages hosts under `/<repo>/`
-          BASE_PATH: /${{ github.event.repository.name }}/
+          BASE_PATH: ${{ env.BASE_PATH }}
           # This is NOT truly secret in a browser build; it's only hidden from the repo.
           VITE_API_ORIGIN: ${{ vars.VITE_API_ORIGIN }}
         run: npm run build
