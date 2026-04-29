@@ -1,12 +1,76 @@
 <!doctype html>
-<html lang="en">
+<html class="dark" lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fantasy League</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'surface-container-low': '#0f1c2c',
+              'surface-container-highest': '#283646',
+              'on-error-container': '#ffdad6',
+              'error-container': '#93000a',
+              'tertiary-fixed': '#d1e4ff',
+              tertiary: '#fffdff',
+              'on-primary-container': '#736300',
+              'on-primary': '#393000',
+              error: '#ffb4ab',
+              secondary: '#bbc6e2',
+              'primary-container': '#ffe135',
+              'on-secondary': '#263046',
+              'secondary-fixed': '#d7e2ff',
+              'on-secondary-container': '#adb8d3',
+              'on-primary-fixed': '#211b00',
+              'on-surface': '#d6e4f9',
+              'surface-container': '#132030',
+              'surface-container-lowest': '#020f1e',
+              'surface-bright': '#2d3a4a',
+              surface: '#061423',
+              'secondary-container': '#3e4960',
+              background: '#061423',
+              'surface-tint': '#e2c60f',
+              'inverse-on-surface': '#243141',
+              'outline-variant': '#4c4733',
+              outline: '#979179',
+              'surface-variant': '#283646',
+              primary: '#fffdff',
+              'on-background': '#d6e4f9',
+              'surface-container-high': '#1e2b3b',
+              'on-surface-variant': '#cec6ac',
+              'surface-dim': '#061423',
+              'inverse-primary': '#6d5e00',
+            },
+            borderRadius: {
+              DEFAULT: '0.125rem',
+              lg: '0.25rem',
+              xl: '0.5rem',
+              full: '0.75rem',
+            },
+            fontFamily: {
+              headline: ['Space Grotesk', 'sans-serif'],
+              body: ['Newsreader', 'serif'],
+              label: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <title>BananaBall Fantasy League</title>
   </head>
-  <body>
+  <body class="bg-background text-on-surface font-label selection:bg-primary-container selection:text-on-primary-container">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
