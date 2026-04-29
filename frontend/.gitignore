@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# The repo root ignores `lib/` (Python template), but we use `src/lib` for TS helpers.
+!src/lib/
+!src/lib/**
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
