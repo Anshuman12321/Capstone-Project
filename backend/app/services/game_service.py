@@ -18,8 +18,11 @@ class GameService:
     Future: add persistence + real simulation + multiplayer synchronization.
     """
 
-    def create_game(self, owner_user_id: UserId | None, settings: GameSettings | None) -> Game:
-        game = Game(owner_user_id=owner_user_id, settings=settings or GameSettings())
+    def create_game(
+        self, owner_user_id: UserId | None, settings: GameSettings | None, name: str | None = None
+    ) -> Game:
+        normalized_name = (name or "").strip() or "Untitled League"
+        game = Game(owner_user_id=owner_user_id, settings=settings or GameSettings(), name=normalized_name)
         with STORE._lock:
             STORE.games[game.game_id] = game
         return game
@@ -38,6 +41,34 @@ class GameService:
         return game
 
     # ---- membership / lobby ----
+    def _remove_user_from_game(self, game: Game, user_id: UserId) -> Game:
+        user_ids = [uid for uid in game.user_ids if uid != user_id]
+        teams_by_user_id = dict(game.teams_by_user_id)
+        departed_team = teams_by_user_id.pop(user_id, None)
+
+        drafted_player_ids = set(game.drafted_player_ids)
+        if departed_team:
+            for player_id in departed_team.roster_player_ids:
+                drafted_player_ids.discard(player_id)
+
+        standings = dict(game.standings)
+        standings.pop(user_id, None)
+
+        owner_user_id = game.owner_user_id
+        if owner_user_id == user_id:
+            owner_user_id = user_ids[0] if user_ids else None
+
+        return game.model_copy(
+            update={
+                "owner_user_id": owner_user_id,
+                "user_ids": user_ids,
+                "teams_by_user_id": teams_by_user_id,
+                "drafted_player_ids": drafted_player_ids,
+                "standings": standings,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        )
+
     def join_game(self, game_id: GameId, user_id: UserId, team_name: str | None = None) -> Game:
         with STORE._lock:
             game = STORE.games[game_id]
@@ -62,6 +93,31 @@ class GameService:
             )
             STORE.games[game_id] = next_game
             return next_game
+
+    def leave_game(self, game_id: GameId, user_id: UserId) -> Game:
+        with STORE._lock:
+            game = STORE.games[game_id]
+            next_game = self._remove_user_from_game(game, user_id)
+            STORE.games[game_id] = next_game
+            return next_game
+
+    def kick_user(self, game_id: GameId, owner_user_id: UserId, target_user_id: UserId) -> Game:
+        with STORE._lock:
+            game = STORE.games[game_id]
+            if game.owner_user_id != owner_user_id:
+                raise PermissionError("Only the league owner can manage players")
+            if target_user_id == owner_user_id:
+                raise PermissionError("Owner cannot kick themselves")
+            next_game = self._remove_user_from_game(game, target_user_id)
+            STORE.games[game_id] = next_game
+            return next_game
+
+    def delete_game(self, game_id: GameId, user_id: UserId) -> None:
+        with STORE._lock:
+            game = STORE.games[game_id]
+            if game.owner_user_id != user_id:
+                raise PermissionError("Only the league owner can delete this game")
+            del STORE.games[game_id]
 
     def start_draft(self, game_id: GameId) -> Game:
         with STORE._lock:

@@ -53,6 +53,11 @@ Open the URL shown in the terminal (usually `http://localhost:5173`).
 
 During development, Vite proxies `/api` and `/health` to the backend on port **8000**, so the UI can call paths like `/api/hello` without extra CORS setup. Start the backend before relying on those requests.
 
+Frontend auth persistence can be configured with `VITE_AUTH_STORAGE`:
+- `session` (tab-scoped sessions, useful for development)
+- `local` (shared across tabs, better for normal use)
+- `auto` (default: `session` in dev, `local` in production)
+
 **Other scripts**
 
 - `npm run build` — production build to `frontend/dist/`

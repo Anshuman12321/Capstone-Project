@@ -55,10 +55,10 @@ export function HomePage() {
             simulation built for draft strategy, roster control, and league dominance.
           </p>
           <div className="flex flex-wrap gap-4">
-            <a className="primary-cta" href="#/draft">
+            <a className="primary-cta" href="#/login">
               Join League
             </a>
-            <a className="glass-cta" href="#/standings">
+            <a className="glass-cta" href="#/login">
               View Demo
             </a>
           </div>
@@ -142,22 +142,22 @@ export function HomePage() {
           Ready to Take <span>Control</span>?
         </h2>
         <p>The next draft starts soon. Secure your franchise spot and begin your legacy.</p>
-        <a href="#/draft">
+        <a href="#/login">
           <span>Start Your Franchise</span>
           <span className="material-symbols-outlined">arrow_forward</span>
         </a>
       </section>
 
       <nav className="mobile-tabbar" aria-label="Mobile navigation">
-        <a href="#/draft">
+        <a href="#/login">
           <span className="material-symbols-outlined">strategy</span>
           Draft
         </a>
-        <a href="#/standings">
+        <a href="#/login">
           <span className="material-symbols-outlined">leaderboard</span>
           League
         </a>
-        <a href="#/team">
+        <a href="#/login">
           <span className="material-symbols-outlined">groups</span>
           Team
         </a>

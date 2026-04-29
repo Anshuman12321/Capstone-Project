@@ -14,12 +14,26 @@ router = APIRouter(prefix="/api/games", tags=["games"])
 
 class CreateGameRequest(BaseModel):
     owner_user_id: UUID | None = None
+    name: str = Field(default="Untitled League", min_length=1, max_length=64)
     settings: GameSettings | None = None
 
 
 class JoinGameRequest(BaseModel):
     user_id: UUID
     team_name: str | None = Field(default=None, max_length=40)
+
+
+class LeaveGameRequest(BaseModel):
+    user_id: UUID
+
+
+class KickUserRequest(BaseModel):
+    owner_user_id: UUID
+    target_user_id: UUID
+
+
+class DeleteGameRequest(BaseModel):
+    user_id: UUID
 
 
 class DraftPlayerRequest(BaseModel):
@@ -35,7 +49,7 @@ class GameLogQuery(BaseModel):
 
 @router.post("", response_model=Game)
 def create_game(req: CreateGameRequest) -> Game:
-    return GAME_SERVICE.create_game(owner_user_id=req.owner_user_id, settings=req.settings)
+    return GAME_SERVICE.create_game(owner_user_id=req.owner_user_id, settings=req.settings, name=req.name)
 
 
 @router.get("", response_model=list[Game])
@@ -78,6 +92,35 @@ def join_game(game_id: UUID, req: JoinGameRequest) -> Game:
         return GAME_SERVICE.join_game(game_id=game_id, user_id=req.user_id, team_name=req.team_name)
     except KeyError:
         raise HTTPException(status_code=404, detail="Game not found")
+
+
+@router.post("/{game_id}/leave", response_model=Game)
+def leave_game(game_id: UUID, req: LeaveGameRequest) -> Game:
+    try:
+        return GAME_SERVICE.leave_game(game_id=game_id, user_id=req.user_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+
+@router.post("/{game_id}/kick", response_model=Game)
+def kick_user(game_id: UUID, req: KickUserRequest) -> Game:
+    try:
+        return GAME_SERVICE.kick_user(game_id=game_id, owner_user_id=req.owner_user_id, target_user_id=req.target_user_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Game not found")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/{game_id}/delete")
+def delete_game(game_id: UUID, req: DeleteGameRequest) -> dict[str, str]:
+    try:
+        GAME_SERVICE.delete_game(game_id=game_id, user_id=req.user_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Game not found")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return {"status": "deleted"}
 
 
 @router.post("/{game_id}/draft/start", response_model=Game)

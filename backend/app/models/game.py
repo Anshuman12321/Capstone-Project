@@ -38,6 +38,7 @@ class Game(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     game_id: GameId = Field(default_factory=uuid4)
+    name: str = Field(default="Untitled League", min_length=1, max_length=64)
     status: GameStatus = GameStatus.lobby
     settings: GameSettings = Field(default_factory=GameSettings)
 

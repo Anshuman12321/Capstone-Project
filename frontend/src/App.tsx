@@ -1,29 +1,122 @@
 import type { AppRoute } from './useHashRoute'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { apiUrl } from './lib/api'
 import { useHashRoute } from './useHashRoute'
 import { DraftPage } from './pages/DraftPage'
+import { GamesPage } from './pages/GamesPage'
 import { HomePage } from './pages/HomePage'
+import { authStorage } from './lib/storage'
+import { LoginPage } from './pages/LoginPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { StandingsPage } from './pages/StandingsPage'
 import { TeamPage } from './pages/TeamPage'
 import './App.css'
 
-const topNav: { route: AppRoute; label: string }[] = [
-  { route: 'draft', label: 'Draft Room' },
-  { route: 'standings', label: 'League' },
-  { route: 'team', label: 'Roster' },
-]
+type AuthUser = {
+  user_id: string
+  username: string
+}
+
+type Game = {
+  game_id: string
+  name: string
+  status: 'lobby' | 'drafting' | 'in_progress' | 'completed'
+  current_week: number
+  owner_user_id: string | null
+  user_ids: string[]
+}
 
 const sideNav: { route: AppRoute; label: string; icon: string }[] = [
-  { route: 'draft', label: 'War Room', icon: 'strategy' },
+  { route: 'draft', label: 'Dashboard', icon: 'dashboard' },
   { route: 'team', label: 'Scouting', icon: 'person_search' },
   { route: 'standings', label: 'Standings', icon: 'leaderboard' },
   { route: 'team', label: 'Cap Space', icon: 'payments' },
+  { route: 'settings', label: 'Settings', icon: 'settings' },
 ]
 
 function App() {
   const [route, navigate] = useHashRoute()
-  const showSidebar = route !== 'home'
-  const activeSideLabel =
-    route === 'draft' ? 'War Room' : route === 'team' ? 'Scouting' : 'Standings'
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [userGames, setUserGames] = useState<Game[]>([])
+  const [activeGameId, setActiveGameId] = useState<string | null>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [officeOpen, setOfficeOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement | null>(null)
+  const officeMenuRef = useRef<HTMLDivElement | null>(null)
+  const isLoggedIn = Boolean(user)
+  const isProtectedRoute = route === 'draft' || route === 'team' || route === 'standings' || route === 'settings'
+  const hasActiveGame = Boolean(activeGameId)
+  const activeGame = userGames.find((game) => game.game_id === activeGameId) ?? null
+  const showSidebar = isLoggedIn && hasActiveGame && route !== 'home' && route !== 'login' && route !== 'games'
+  const activeSideLabel = route === 'draft' ? 'Dashboard' : route === 'settings' ? 'Settings' : route === 'team' ? 'Scouting' : 'Standings'
+  const gmInitials = useMemo(() => {
+    if (!user) return 'GM'
+    return user.username
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'GM'
+  }, [user])
+
+  const loadUserGames = async (authUser: AuthUser) => {
+    const res = await fetch(apiUrl('/api/games'))
+    if (!res.ok) return
+    const allGames = (await res.json()) as Game[]
+    const mine = allGames.filter((game) => game.owner_user_id === authUser.user_id || game.user_ids.includes(authUser.user_id))
+    setUserGames(mine)
+    if (activeGameId && !mine.some((game) => game.game_id === activeGameId)) {
+      authStorage.removeItem('active_game_id')
+      setActiveGameId(null)
+    }
+  }
+
+  useEffect(() => {
+    const existing = authStorage.getItem('gm_user')
+    if (existing) {
+      try {
+        const parsed = JSON.parse(existing) as AuthUser
+        setUser(parsed)
+        void loadUserGames(parsed)
+      } catch {
+        authStorage.removeItem('gm_user')
+      }
+    }
+    const existingGameId = authStorage.getItem('active_game_id')
+    if (existingGameId) setActiveGameId(existingGameId)
+  }, [])
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (!profileMenuRef.current) return
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setProfileOpen(false)
+      }
+      if (!officeMenuRef.current) return
+      if (!officeMenuRef.current.contains(event.target as Node)) {
+        setOfficeOpen(false)
+      }
+    }
+    document.addEventListener('click', onClickOutside)
+    return () => document.removeEventListener('click', onClickOutside)
+  }, [])
+
+  const handleProtectedNavigate = (targetRoute: AppRoute) => {
+    if (!isLoggedIn) {
+      navigate('login')
+      return
+    }
+    if (targetRoute !== 'games' && !hasActiveGame) {
+      navigate('games')
+      return
+    }
+    navigate(targetRoute)
+  }
+
+  const gameStatusLabel = (game: Game): string => {
+    if (game.status === 'lobby') return 'Lobby'
+    return `Week ${Math.max(1, game.current_week)}`
+  }
 
   return (
     <div className="min-h-screen bg-surface text-on-surface font-label selection:bg-primary-container selection:text-on-primary-container">
@@ -36,21 +129,21 @@ function App() {
           <button type="button" className="brand-wordmark" onClick={() => navigate('home')}>
             BananaBall
           </button>
-          <nav className="hidden md:flex gap-8 items-center font-headline font-bold uppercase tracking-tighter" aria-label="Main">
-            {topNav.map(({ route: itemRoute, label }) => (
-              <button
-                key={itemRoute}
-                type="button"
-                className={route === itemRoute ? 'top-nav-link active' : 'top-nav-link'}
-                onClick={() => navigate(itemRoute)}
-                aria-current={route === itemRoute ? 'page' : undefined}
-              >
-                {label}
-              </button>
-            ))}
-            <button type="button" className="top-nav-link" onClick={() => navigate('team')}>
-              Trades
-            </button>
+          <nav className="hidden md:flex gap-4 items-center font-headline font-bold uppercase tracking-tighter" aria-label="Main">
+            {isLoggedIn && (
+              <>
+                <button
+                  type="button"
+                  className={route === 'draft' ? 'top-nav-link active' : 'top-nav-link'}
+                  onClick={() => handleProtectedNavigate('draft')}
+                >
+                  Dashboard
+                </button>
+                <button type="button" className="top-nav-link" onClick={() => navigate('games')}>
+                  Join/Create League
+                </button>
+              </>
+            )}
           </nav>
         </div>
 
@@ -61,8 +154,41 @@ function App() {
           <button type="button" className="material-symbols-outlined header-icon" aria-label="Notifications">
             notifications
           </button>
-          <div className="avatar-orb" aria-label="Executive profile">
-            GM
+          <div className="profile-menu" ref={profileMenuRef}>
+            {!isLoggedIn ? (
+              <button type="button" className="glass-cta compact" onClick={() => navigate('login')}>
+                Login
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="avatar-orb"
+                  aria-label="Executive profile menu"
+                  onClick={() => setProfileOpen((prev) => !prev)}
+                >
+                  {gmInitials}
+                </button>
+                {profileOpen && (
+                  <div className="profile-dropdown">
+                    <p className="profile-name">{user?.username ?? 'Account'}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        authStorage.removeItem('gm_user')
+                        authStorage.removeItem('active_game_id')
+                        setUser(null)
+                        setActiveGameId(null)
+                        setProfileOpen(false)
+                        navigate('home')
+                      }}
+                    >
+                      Log out
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -71,14 +197,40 @@ function App() {
         {showSidebar && (
           <aside className="side-nav" aria-label="Front office navigation">
             <div className="px-6 mb-8">
-              <div className="flex items-center gap-3">
-                <div className="side-avatar">
-                  <span className="material-symbols-outlined text-primary-container">strategy</span>
-                </div>
-                <div>
-                  <p className="font-headline text-primary-container font-bold">Front Office</p>
-                  <p className="text-xs text-slate-500 font-label">Elite Executive</p>
-                </div>
+              <div className="front-office-menu" ref={officeMenuRef}>
+                <button type="button" className="front-office-trigger" onClick={() => setOfficeOpen((prev) => !prev)}>
+                  <div className="side-avatar">
+                    <span className="material-symbols-outlined text-primary-container">strategy</span>
+                  </div>
+                  <div>
+                    <p className="font-headline text-primary-container font-bold">{activeGame?.name ?? 'Front Office'}</p>
+                    <p className="text-xs text-slate-500 font-label">Elite Executive</p>
+                  </div>
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+                {officeOpen && (
+                  <div className="front-office-dropdown">
+                    <p>Your Leagues</p>
+                    <div className="front-office-list">
+                      {userGames.map((game) => (
+                        <button
+                          key={game.game_id}
+                          type="button"
+                          className={activeGameId === game.game_id ? 'active' : ''}
+                          onClick={() => {
+                            authStorage.setItem('active_game_id', game.game_id)
+                            setActiveGameId(game.game_id)
+                            setOfficeOpen(false)
+                            navigate('draft')
+                          }}
+                        >
+                          <span className="league-name">{game.name}</span>
+                          <span className="league-meta">{gameStatusLabel(game)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -88,7 +240,7 @@ function App() {
                   key={`${label}-${itemRoute}`}
                   type="button"
                   className={label === activeSideLabel ? 'side-nav-link active' : 'side-nav-link'}
-                  onClick={() => navigate(itemRoute)}
+                  onClick={() => handleProtectedNavigate(itemRoute)}
                 >
                   <span className="material-symbols-outlined">{icon}</span>
                   {label}
@@ -101,8 +253,8 @@ function App() {
             </nav>
 
             <div className="px-4 mt-auto">
-              <button type="button" className="start-draft-button" onClick={() => navigate('draft')}>
-                START DRAFT
+              <button type="button" className="start-draft-button" onClick={() => handleProtectedNavigate('draft')}>
+                DASHBOARD
               </button>
             </div>
           </aside>
@@ -110,9 +262,84 @@ function App() {
 
         <main id="main" className={showSidebar ? 'app-main' : 'app-main home-main'}>
           {route === 'home' && <HomePage />}
-          {route === 'draft' && <DraftPage />}
-          {route === 'team' && <TeamPage />}
-          {route === 'standings' && <StandingsPage />}
+          {route === 'login' && (
+            <LoginPage
+              onLogin={(nextUser) => {
+                authStorage.setItem('gm_user', JSON.stringify(nextUser))
+                setUser(nextUser)
+                void loadUserGames(nextUser)
+                navigate('games')
+              }}
+              onCancel={() => navigate('home')}
+            />
+          )}
+          {isLoggedIn && route === 'games' && user && (
+            <GamesPage
+              user={user}
+              onGamesChanged={() => void loadUserGames(user)}
+              onSelectGame={(gameId) => {
+                authStorage.setItem('active_game_id', gameId)
+                setActiveGameId(gameId)
+                navigate('draft')
+              }}
+            />
+          )}
+          {!isLoggedIn && route === 'games' && (
+            <LoginPage
+              requireAuthMessage="Log in to access your leagues."
+              onLogin={(nextUser) => {
+                authStorage.setItem('gm_user', JSON.stringify(nextUser))
+                setUser(nextUser)
+                void loadUserGames(nextUser)
+                navigate('games')
+              }}
+              onCancel={() => navigate('home')}
+            />
+          )}
+          {!isLoggedIn && isProtectedRoute && (
+            <LoginPage
+              requireAuthMessage="Log in to access dashboard features."
+              onLogin={(nextUser) => {
+                authStorage.setItem('gm_user', JSON.stringify(nextUser))
+                setUser(nextUser)
+                void loadUserGames(nextUser)
+                navigate('games')
+              }}
+              onCancel={() => navigate('home')}
+            />
+          )}
+          {isLoggedIn && !hasActiveGame && isProtectedRoute && user && (
+            <GamesPage
+              user={user}
+              onGamesChanged={() => void loadUserGames(user)}
+              onSelectGame={(gameId) => {
+                authStorage.setItem('active_game_id', gameId)
+                setActiveGameId(gameId)
+                navigate('draft')
+              }}
+            />
+          )}
+          {isLoggedIn && hasActiveGame && route === 'draft' && <DraftPage />}
+          {isLoggedIn && hasActiveGame && route === 'team' && <TeamPage />}
+          {isLoggedIn && hasActiveGame && route === 'standings' && <StandingsPage />}
+          {isLoggedIn && hasActiveGame && route === 'settings' && user && activeGame && (
+            <SettingsPage
+              user={user}
+              game={activeGame}
+              onLeftLeague={() => {
+                authStorage.removeItem('active_game_id')
+                setActiveGameId(null)
+                void loadUserGames(user)
+                navigate('games')
+              }}
+              onDeletedLeague={() => {
+                authStorage.removeItem('active_game_id')
+                setActiveGameId(null)
+                void loadUserGames(user)
+                navigate('games')
+              }}
+            />
+          )}
         </main>
       </div>
     </div>
