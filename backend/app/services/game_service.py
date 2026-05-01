@@ -150,30 +150,29 @@ class GameService:
                 merged.update(stat_patch)
                 STORE.update_player_stats(pid, merged)
 
-<<<<<<< HEAD
+        # Combine both simulation logic and remote db (STORE) update for next week.
+        simulation_events = [*game.simulation_events, *sim_result.events]
+        standings = dict(game.standings)
+        standings.update(sim_result.updated_standings)
+        next_game = game.model_copy(
+            update={
+                "status": GameStatus.in_progress
+                if game.status in (GameStatus.lobby, GameStatus.drafting)
+                else game.status,
+                "current_week": sim_result.week,
+                "standings": standings,
+                "simulation_events": simulation_events,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        )
+        # Save next_game using remote db approach
         STORE.advance_week(game_id, emitted_events=sim_result.events)
-        next_game = STORE.get_game(game_id)
-        if not next_game:
-            raise KeyError("Game not found")
-        return next_game
-=======
-            simulation_events = [*game.simulation_events, *sim_result.events]
-            standings = dict(game.standings)
-            standings.update(sim_result.updated_standings)
-            next_game = game.model_copy(
-                update={
-                    "status": GameStatus.in_progress
-                    if game.status in (GameStatus.lobby, GameStatus.drafting)
-                    else game.status,
-                    "current_week": sim_result.week,
-                    "standings": standings,
-                    "simulation_events": simulation_events,
-                    "updated_at": datetime.now(timezone.utc),
-                }
-            )
-            STORE.games[game_id] = next_game
+        # After advancing in remote db, refetch the latest version to ensure source of truth
+        remote_next_game = STORE.get_game(game_id)
+        if not remote_next_game:
+            # Fallback to locally simulated version if remote db fails somehow
             return next_game
->>>>>>> main
+        return remote_next_game
 
 
 GAME_SERVICE = GameService()
