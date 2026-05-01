@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from .ids import GameId, PlayerId, UserId
-from .simulation import SimulationEvent
+from .simulation import FantasyStanding, SimulationEvent
 from .team import Team
 from .transaction import Transaction
 
@@ -55,7 +55,7 @@ class Game(BaseModel):
 
     # Season-ish progression
     current_week: int = Field(default=0, ge=0)
-    standings: dict[UserId, int] = Field(default_factory=dict)  # wins for now
+    standings: dict[UserId, FantasyStanding] = Field(default_factory=dict)
 
     # Simulation / AI progression log (append-only)
     simulation_events: list[SimulationEvent] = Field(default_factory=list)

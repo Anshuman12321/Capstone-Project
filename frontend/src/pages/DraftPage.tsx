@@ -1,59 +1,114 @@
 import { useState } from 'react'
+import { apiUrl } from '../lib/api'
 import { draftBoard } from '../mockData'
+import type { Game } from '../types'
 
 type DraftType = 'snake' | 'linear'
 
-export function DraftPage() {
+type DraftPageProps = {
+  activeGame: Game
+  onGameUpdated: (game: Game) => void
+}
+
+export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
   const [draftType, setDraftType] = useState<DraftType>('snake')
   const [rounds, setRounds] = useState(15)
   const [secondsPerPick, setSecondsPerPick] = useState(90)
+  const [progressing, setProgressing] = useState(false)
+  const [progressMessage, setProgressMessage] = useState<string | null>(null)
+  const [progressError, setProgressError] = useState<string | null>(null)
   const featuredPlayer = draftBoard[0]
   const queuedPlayers = draftBoard.slice(1, 4)
+  const fantasyMatchups = activeGame.simulation_events.filter(
+    (event) => event.type === 'game_outcome' && event.payload.kind === 'fantasy_matchup',
+  )
+  const latestMatchup = fantasyMatchups.at(-1)
+
+  const handleProgressWeek = async () => {
+    setProgressing(true)
+    setProgressMessage(null)
+    setProgressError(null)
+    try {
+      const res = await fetch(apiUrl(`/api/games/${activeGame.game_id}/simulate/next-week`), {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        let message = `Failed to progress week (HTTP ${res.status})`
+        try {
+          const body = (await res.json()) as { detail?: string }
+          if (body.detail) message = body.detail
+        } catch {
+          // Keep the HTTP fallback when the response is not JSON.
+        }
+        throw new Error(message)
+      }
+      const updatedGame = (await res.json()) as Game
+      onGameUpdated(updatedGame)
+      setProgressMessage(`Advanced to Week ${updatedGame.current_week}.`)
+    } catch (e: unknown) {
+      setProgressError(e instanceof Error ? e.message : 'Failed to progress week')
+    } finally {
+      setProgressing(false)
+    }
+  }
 
   return (
     <div className="draft-page space-y-8">
       <section className="draft-hero">
         <div>
-          <h1>Round 1, Pick 4</h1>
-          <p>The Gotham Knights are now on the clock.</p>
+          <h1>Week {activeGame.current_week || 0}</h1>
+          <p>{activeGame.name} is ready for the next simulated NBA scoring week.</p>
         </div>
         <div className="glass-panel draft-timer">
           <div className="text-center">
-            <p>Time Remaining</p>
-            <strong>
-              {String(Math.floor(secondsPerPick / 60)).padStart(2, '0')}:
-              {String(secondsPerPick % 60).padStart(2, '0')}
-            </strong>
+            <p>Current Week</p>
+            <strong>{activeGame.current_week}</strong>
           </div>
           <div className="timer-rule" />
           <div>
-            <p>Current Strategy</p>
-            <span>{draftType === 'snake' ? 'SNAKE DRAFT' : 'LINEAR DRAFT'}</span>
+            <p>League Status</p>
+            <span>{activeGame.status.replace('_', ' ').toUpperCase()}</span>
           </div>
+          <button type="button" className="primary-cta compact" onClick={handleProgressWeek} disabled={progressing}>
+            {progressing ? 'Progressing...' : 'Progress Week'}
+          </button>
         </div>
       </section>
+
+      {(progressMessage || progressError) && (
+        <section className="week-progress-panel glass-panel">
+          {progressMessage && <p className="week-progress-success">{progressMessage}</p>}
+          {progressError && <p className="login-error">{progressError}</p>}
+        </section>
+      )}
 
       <div className="draft-grid">
         <section className="draft-feed">
           <h2>
             <span className="material-symbols-outlined">history</span>
-            Recent Activity
+            Weekly Activity
           </h2>
           <div className="space-y-3">
-            {queuedPlayers.map((player) => (
-              <article key={player.name} className="activity-card">
-                <span>{String(player.rank).padStart(2, '0')}</span>
+            {latestMatchup ? (
+              <article className="activity-card">
+                <span>{String(latestMatchup.week).padStart(2, '0')}</span>
                 <div>
-                  <p>{player.name}</p>
-                  <small>{player.team}</small>
+                  <p>
+                    {latestMatchup.payload.home_team} {Number(latestMatchup.payload.home_score).toFixed(1)} -{' '}
+                    {Number(latestMatchup.payload.away_score).toFixed(1)} {latestMatchup.payload.away_team}
+                  </p>
+                  <small>Latest fantasy matchup</small>
                 </div>
               </article>
-            ))}
-            <article className="activity-card pending">
-              <span>04</span>
-              <div className="h-4 w-24 bg-surface-container-highest/50 rounded animate-pulse" />
-              <strong>YOU</strong>
-            </article>
+            ) : (
+              <article className="activity-card pending">
+                <span>00</span>
+                <div>
+                  <p>No simulated weeks yet</p>
+                  <small>Draft rosters, then progress the week</small>
+                </div>
+              </article>
+            )}
           </div>
         </section>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { apiUrl } from '../lib/api'
 
 type AuthUser = {
@@ -29,7 +29,7 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
   const [gameName, setGameName] = useState('')
   const [joinGameId, setJoinGameId] = useState('')
 
-  const loadGames = async () => {
+  const loadGames = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -45,11 +45,14 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
     } finally {
       setLoading(false)
     }
-  }
+  }, [user.user_id])
 
   useEffect(() => {
-    void loadGames()
-  }, [user.user_id])
+    const timeout = window.setTimeout(() => {
+      void loadGames()
+    }, 0)
+    return () => window.clearTimeout(timeout)
+  }, [loadGames])
 
   const closeModal = () => {
     setModal(null)

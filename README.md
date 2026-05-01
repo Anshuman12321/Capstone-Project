@@ -36,8 +36,19 @@ python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 - `GET /health` — `{ "status": "ok" }`
 - `GET /api/hello` — `{ "message": "Hello from FastAPI" }`
+- `POST /api/games/{game_id}/simulate/next-week` — simulates one NBA schedule week, scores drafted fantasy rosters, and updates league standings.
 
 CORS is enabled for the Vite dev origin (`http://localhost:5173`).
+
+## Weekly simulation data
+
+The weekly simulator reads NBA CSV inputs from `backend/data/`. To manually test it through the website:
+
+1. Start the backend and frontend.
+2. Create or join a league with at least two users.
+3. Create backend players whose names and `real_team` values match the CSV data, then draft at least one player onto two different fantasy teams.
+4. Open the dashboard and click **Progress Week**.
+5. Confirm the dashboard week increments, then open **Standings** to see fantasy records, points for/against, streaks, recent fantasy matchups, and NBA scoring trend data.
 
 ## Frontend
 
@@ -63,6 +74,17 @@ Frontend auth persistence can be configured with `VITE_AUTH_STORAGE`:
 - `npm run build` — production build to `frontend/dist/`
 - `npm run preview` — serve the production build locally
 - `npm run lint` — run ESLint
+
+## Tests
+
+From the repository root:
+
+```bash
+python -m pytest backend/tests
+cd frontend
+npm run lint
+npm run build
+```
 
 ## Typical workflow
 

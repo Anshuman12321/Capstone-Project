@@ -1,7 +1,46 @@
-import { standings } from '../mockData'
+import type { AuthUser, FantasyStanding, Game } from '../types'
 
-export function StandingsPage() {
-  const topTeams = standings.slice(0, 4)
+type StandingsPageProps = {
+  activeGame: Game
+  user: AuthUser | null
+}
+
+type StandingRow = FantasyStanding & {
+  userId: string
+  rank: number
+  team: string
+  owner: string
+}
+
+const emptyStanding: FantasyStanding = {
+  wins: 0,
+  losses: 0,
+  ties: 0,
+  points_for: 0,
+  points_against: 0,
+  streak: '',
+}
+
+export function StandingsPage({ activeGame, user }: StandingsPageProps) {
+  const rows: StandingRow[] = Object.entries(activeGame.teams_by_user_id)
+    .map(([userId, team]) => ({
+      userId,
+      team: team.name,
+      owner: userId === user?.user_id ? 'You' : userId.slice(0, 8),
+      ...(activeGame.standings[userId] ?? emptyStanding),
+      rank: 0,
+    }))
+    .sort((a, b) => b.wins - a.wins || b.points_for - a.points_for || a.losses - b.losses)
+    .map((row, index) => ({ ...row, rank: index + 1 }))
+
+  const recentMatchups = activeGame.simulation_events
+    .filter((event) => event.type === 'game_outcome' && event.payload.kind === 'fantasy_matchup')
+    .slice(-3)
+    .reverse()
+  const nbaResults = activeGame.simulation_events
+    .filter((event) => event.type === 'game_outcome' && event.payload.kind === 'nba_game')
+    .slice(-7)
+  const topTeams = rows.slice(0, 4)
 
   return (
     <div className="standings-page">
@@ -12,7 +51,7 @@ export function StandingsPage() {
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfS-1JZNuuqYCYuUBpu8kHNnbL17IPXRHSDYd0AXfSy-5Srs3l_jfDgfSs1B5cSQgOwg9weSATMzOYI_y-x0zUOKoWJUbdY2ZDd093Nv83FsUurJtQOHVHMQouddHOOJ8MScg_Aw2TiHqNnF3qeqpdHk6oDP04RvzkzZR3OktsExqHw61IecMYf-0TbTo5irX166sSRFvwuYHs13UsSgP5s4nawxZ3sEykQom0lM2leGas-4cq9WJbwWjX9e96mEPw7hFg8D0tKhQ"
         />
         <div>
-          <span>Week 14 Simulation</span>
+          <span>Week {activeGame.current_week} Simulation</span>
           <h1>League Supremacy</h1>
           <p>
             The front office analysis of standings, scoring trends, and player performance
@@ -29,30 +68,41 @@ export function StandingsPage() {
               <a href="#/standings">Full Schedule</a>
             </div>
             <div className="space-y-4">
-              {[
-                ['HOU', '112', 'MIA', '98', 'J. Green (34 PTS)'],
-                ['LAL', '105', 'GSW', '121', 'S. Curry (41 PTS)'],
-                ['NYK', '118', 'BOS', '114', 'J. Brunson (28 PTS)'],
-              ].map(([away, awayScore, home, homeScore, scorer]) => (
-                <article key={`${away}-${home}`} className="game-row">
+              {recentMatchups.length > 0 ? (
+                recentMatchups.map((event) => (
+                  <article key={event.event_id} className="game-row">
+                    <div>
+                      <div className="team-score">
+                        <p>{event.payload.away_team}</p>
+                        <strong className={Number(event.payload.away_score) > Number(event.payload.home_score) ? 'winner' : ''}>
+                          {Number(event.payload.away_score).toFixed(1)}
+                        </strong>
+                      </div>
+                      <div className="score-rule" />
+                      <div className="team-score">
+                        <p>{event.payload.home_team}</p>
+                        <strong className={Number(event.payload.home_score) > Number(event.payload.away_score) ? 'winner' : ''}>
+                          {Number(event.payload.home_score).toFixed(1)}
+                        </strong>
+                      </div>
+                      <div className="top-scorer">
+                        <small>Week</small>
+                        <span>{event.week}</span>
+                      </div>
+                    </div>
+                    <span>Final</span>
+                  </article>
+                ))
+              ) : (
+                <article className="game-row">
                   <div>
-                    <div className="team-score">
-                      <p>{away}</p>
-                      <strong className={Number(awayScore) > Number(homeScore) ? 'winner' : ''}>{awayScore}</strong>
-                    </div>
-                    <div className="score-rule" />
-                    <div className="team-score">
-                      <p>{home}</p>
-                      <strong className={Number(homeScore) > Number(awayScore) ? 'winner' : ''}>{homeScore}</strong>
-                    </div>
                     <div className="top-scorer">
-                      <small>Top Scorer</small>
-                      <span>{scorer}</span>
+                      <small>No results yet</small>
+                      <span>Use Progress Week on the dashboard.</span>
                     </div>
                   </div>
-                  <span>Final</span>
                 </article>
-              ))}
+              )}
             </div>
           </section>
 
@@ -65,20 +115,26 @@ export function StandingsPage() {
               </div>
             </div>
             <div className="trend-bars">
-              {[40, 65, 90, 55, 75, 45, 82].map((height, index) => (
-                <div key={height + index} style={{ height: `${height}%` }}>
-                  <span>{['12.4', '18.1', '24.8', '15.9', '21.2', '13.7', '23.1'][index]}</span>
-                </div>
-              ))}
+              {(nbaResults.length > 0 ? nbaResults : []).map((event) => {
+                const total = Number(event.payload.home_points) + Number(event.payload.away_points)
+                const height = Math.max(20, Math.min(100, (total / 280) * 100))
+                return (
+                  <div key={event.event_id} style={{ height: `${height}%` }}>
+                    <span>{total}</span>
+                  </div>
+                )
+              })}
+              {nbaResults.length === 0 &&
+                [20, 20, 20, 20, 20, 20, 20].map((height, index) => (
+                  <div key={height + index} style={{ height: `${height}%` }}>
+                    <span>0</span>
+                  </div>
+                ))}
             </div>
             <div className="trend-days">
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-              <span>Sun</span>
+              {(nbaResults.length > 0 ? nbaResults : Array.from({ length: 7 })).map((_, index) => (
+                <span key={index}>G{index + 1}</span>
+              ))}
             </div>
           </section>
         </div>
@@ -88,8 +144,8 @@ export function StandingsPage() {
             <h2>League Standings</h2>
           </div>
           <div className="divide-y divide-outline-variant/5">
-            {standings.map((row) => (
-              <article key={row.team} className={row.owner === 'You' ? 'standing-row active' : 'standing-row'}>
+            {rows.map((row) => (
+              <article key={row.userId} className={row.owner === 'You' ? 'standing-row active' : 'standing-row'}>
                 <div>
                   <span>{String(row.rank).padStart(2, '0')}</span>
                   <div>
@@ -98,10 +154,11 @@ export function StandingsPage() {
                   </div>
                 </div>
                 <p>
-                  {row.w}-{row.l}-{row.t}
+                  {row.wins}-{row.losses}-{row.ties}
                 </p>
               </article>
             ))}
+            {rows.length === 0 && <p className="standings-empty">No teams have joined this league yet.</p>}
           </div>
         </aside>
       </div>
@@ -126,20 +183,21 @@ export function StandingsPage() {
             </thead>
             <tbody>
               {topTeams.map((row) => (
-                <tr key={row.team} className={row.owner === 'You' ? 'highlight-row' : undefined}>
+                <tr key={row.userId} className={row.owner === 'You' ? 'highlight-row' : undefined}>
                   <td>{row.rank}</td>
                   <td className="name">{row.team}</td>
                   <td>{row.owner}</td>
                   <td>
-                    {row.w}-{row.l}-{row.t}
+                    {row.wins}-{row.losses}-{row.ties}
                   </td>
-                  <td>{row.pf.toFixed(1)}</td>
-                  <td>{row.pa.toFixed(1)}</td>
-                  <td>{row.streak}</td>
+                  <td>{row.points_for.toFixed(1)}</td>
+                  <td>{row.points_against.toFixed(1)}</td>
+                  <td>{row.streak || '-'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {topTeams.length === 0 && <p className="standings-empty">Standings will appear after teams join and weeks are simulated.</p>}
         </div>
       </section>
     </div>

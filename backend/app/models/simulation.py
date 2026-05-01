@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .ids import PlayerId, TeamId
+from .ids import PlayerId, TeamId, UserId
 
 
 class SimulationEventType(str, Enum):
@@ -36,10 +36,22 @@ class SimulationEvent(BaseModel):
     payload: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
 
+class FantasyStanding(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    wins: int = Field(default=0, ge=0)
+    losses: int = Field(default=0, ge=0)
+    ties: int = Field(default=0, ge=0)
+    points_for: float = Field(default=0.0, ge=0)
+    points_against: float = Field(default=0.0, ge=0)
+    streak: str = ""
+
+
 class SimulationStepResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     week: int = Field(ge=0)
     events: list[SimulationEvent] = Field(default_factory=list)
     updated_player_stats: dict[PlayerId, dict[str, str | int | float]] = Field(default_factory=dict)
+    updated_standings: dict[UserId, FantasyStanding] = Field(default_factory=dict)
 

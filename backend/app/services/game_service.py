@@ -150,11 +150,30 @@ class GameService:
                 merged.update(stat_patch)
                 STORE.update_player_stats(pid, merged)
 
+<<<<<<< HEAD
         STORE.advance_week(game_id, emitted_events=sim_result.events)
         next_game = STORE.get_game(game_id)
         if not next_game:
             raise KeyError("Game not found")
         return next_game
+=======
+            simulation_events = [*game.simulation_events, *sim_result.events]
+            standings = dict(game.standings)
+            standings.update(sim_result.updated_standings)
+            next_game = game.model_copy(
+                update={
+                    "status": GameStatus.in_progress
+                    if game.status in (GameStatus.lobby, GameStatus.drafting)
+                    else game.status,
+                    "current_week": sim_result.week,
+                    "standings": standings,
+                    "simulation_events": simulation_events,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            )
+            STORE.games[game_id] = next_game
+            return next_game
+>>>>>>> main
 
 
 GAME_SERVICE = GameService()

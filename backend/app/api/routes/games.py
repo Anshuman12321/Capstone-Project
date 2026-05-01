@@ -147,4 +147,6 @@ def simulate_next_week(game_id: UUID) -> Game:
         return GAME_SERVICE.simulate_next_week(game_id=game_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="Game not found")
+    except (FileNotFoundError, RuntimeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
 

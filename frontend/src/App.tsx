@@ -1,5 +1,5 @@
 import type { AppRoute } from './useHashRoute'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiUrl } from './lib/api'
 import { useHashRoute } from './useHashRoute'
 import { DraftPage } from './pages/DraftPage'
@@ -10,21 +10,8 @@ import { LoginPage } from './pages/LoginPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { StandingsPage } from './pages/StandingsPage'
 import { TeamPage } from './pages/TeamPage'
+import type { AuthUser, Game } from './types'
 import './App.css'
-
-type AuthUser = {
-  user_id: string
-  username: string
-}
-
-type Game = {
-  game_id: string
-  name: string
-  status: 'lobby' | 'drafting' | 'in_progress' | 'completed'
-  current_week: number
-  owner_user_id: string | null
-  user_ids: string[]
-}
 
 const sideNav: { route: AppRoute; label: string; icon: string }[] = [
   { route: 'draft', label: 'Dashboard', icon: 'dashboard' },
@@ -36,9 +23,18 @@ const sideNav: { route: AppRoute; label: string; icon: string }[] = [
 
 function App() {
   const [route, navigate] = useHashRoute()
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const existing = authStorage.getItem('gm_user')
+    if (!existing) return null
+    try {
+      return JSON.parse(existing) as AuthUser
+    } catch {
+      authStorage.removeItem('gm_user')
+      return null
+    }
+  })
   const [userGames, setUserGames] = useState<Game[]>([])
-  const [activeGameId, setActiveGameId] = useState<string | null>(null)
+  const [activeGameId, setActiveGameId] = useState<string | null>(() => authStorage.getItem('active_game_id'))
   const [profileOpen, setProfileOpen] = useState(false)
   const [officeOpen, setOfficeOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
@@ -59,7 +55,7 @@ function App() {
       .join('') || 'GM'
   }, [user])
 
-  const loadUserGames = async (authUser: AuthUser) => {
+  const loadUserGames = useCallback(async (authUser: AuthUser) => {
     const res = await fetch(apiUrl('/api/games'))
     if (!res.ok) return
     const allGames = (await res.json()) as Game[]
@@ -69,22 +65,15 @@ function App() {
       authStorage.removeItem('active_game_id')
       setActiveGameId(null)
     }
-  }
+  }, [activeGameId])
 
   useEffect(() => {
-    const existing = authStorage.getItem('gm_user')
-    if (existing) {
-      try {
-        const parsed = JSON.parse(existing) as AuthUser
-        setUser(parsed)
-        void loadUserGames(parsed)
-      } catch {
-        authStorage.removeItem('gm_user')
-      }
-    }
-    const existingGameId = authStorage.getItem('active_game_id')
-    if (existingGameId) setActiveGameId(existingGameId)
-  }, [])
+    if (!user) return undefined
+    const timeout = window.setTimeout(() => {
+      void loadUserGames(user)
+    }, 0)
+    return () => window.clearTimeout(timeout)
+  }, [loadUserGames, user])
 
   useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
@@ -116,6 +105,10 @@ function App() {
   const gameStatusLabel = (game: Game): string => {
     if (game.status === 'lobby') return 'Lobby'
     return `Week ${Math.max(1, game.current_week)}`
+  }
+
+  const handleGameUpdated = (updatedGame: Game) => {
+    setUserGames((prev) => prev.map((game) => (game.game_id === updatedGame.game_id ? updatedGame : game)))
   }
 
   return (
@@ -319,9 +312,11 @@ function App() {
               }}
             />
           )}
-          {isLoggedIn && hasActiveGame && route === 'draft' && <DraftPage />}
+          {isLoggedIn && hasActiveGame && route === 'draft' && activeGame && (
+            <DraftPage activeGame={activeGame} onGameUpdated={handleGameUpdated} />
+          )}
           {isLoggedIn && hasActiveGame && route === 'team' && <TeamPage />}
-          {isLoggedIn && hasActiveGame && route === 'standings' && <StandingsPage />}
+          {isLoggedIn && hasActiveGame && route === 'standings' && activeGame && <StandingsPage activeGame={activeGame} user={user} />}
           {isLoggedIn && hasActiveGame && route === 'settings' && user && activeGame && (
             <SettingsPage
               user={user}
