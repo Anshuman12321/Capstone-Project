@@ -197,6 +197,46 @@
   font-weight: 700;
 }
 
+.profile-dropdown .profile-danger {
+  color: #f5a8a8;
+  margin-top: 0.15rem;
+}
+
+.profile-dropdown .profile-danger:hover {
+  background: rgba(180, 60, 60, 0.2);
+}
+
+.profile-delete-confirm {
+  padding: 0.35rem 0.5rem 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 0.25rem;
+}
+
+.profile-delete-warning {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #c8d4e6;
+}
+
+.profile-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.profile-dropdown .profile-danger-solid {
+  background: #8b2f2f;
+  color: #fff;
+  text-align: center;
+  flex: 1;
+  min-width: 5.5rem;
+}
+
+.profile-dropdown .profile-danger-solid:hover {
+  background: #a83838;
+}
+
 .app-shell.with-sidebar {
   display: flex;
 }

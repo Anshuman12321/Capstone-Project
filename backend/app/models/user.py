@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .ids import GameId
+
 
 class User(BaseModel):
     """
@@ -19,4 +21,8 @@ class User(BaseModel):
     user_id: UUID = Field(default_factory=uuid4)
     username: str = Field(min_length=1, max_length=32)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    game_ids: list[GameId] = Field(
+        default_factory=list,
+        description="Leagues this user belongs to (derived from teams rows).",
+    )
 

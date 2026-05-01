@@ -87,7 +87,9 @@ class GameService:
             raise KeyError("Game not found")
         STORE.leave_game(game_id, user_id)
         next_game = STORE.get_game(game_id)
-        return next_game or game.model_copy(update={"updated_at": datetime.now(timezone.utc)})
+        if not next_game:
+            raise KeyError("Game not found")
+        return next_game
 
     def kick_user(self, game_id: GameId, owner_user_id: UserId, target_user_id: UserId) -> Game:
         game = STORE.get_game(game_id)
@@ -98,7 +100,10 @@ class GameService:
         if target_user_id == owner_user_id:
             raise PermissionError("Owner cannot kick themselves")
         STORE.leave_game(game_id, target_user_id)
-        return STORE.get_game(game_id) or game
+        next_game = STORE.get_game(game_id)
+        if not next_game:
+            raise KeyError("Game not found")
+        return next_game
 
     def delete_game(self, game_id: GameId, user_id: UserId) -> None:
         game = STORE.get_game(game_id)

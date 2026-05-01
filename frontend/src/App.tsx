@@ -36,6 +36,7 @@ function App() {
   const [userGames, setUserGames] = useState<Game[]>([])
   const [activeGameId, setActiveGameId] = useState<string | null>(() => authStorage.getItem('active_game_id'))
   const [profileOpen, setProfileOpen] = useState(false)
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false)
   const [officeOpen, setOfficeOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
   const officeMenuRef = useRef<HTMLDivElement | null>(null)
@@ -56,10 +57,9 @@ function App() {
   }, [user])
 
   const loadUserGames = useCallback(async (authUser: AuthUser) => {
-    const res = await fetch(apiUrl('/api/games'))
+    const res = await fetch(apiUrl(`/api/users/${authUser.user_id}/games`))
     if (!res.ok) return
-    const allGames = (await res.json()) as Game[]
-    const mine = allGames.filter((game) => game.owner_user_id === authUser.user_id || game.user_ids.includes(authUser.user_id))
+    const mine = (await res.json()) as Game[]
     setUserGames(mine)
     if (activeGameId && !mine.some((game) => game.game_id === activeGameId)) {
       authStorage.removeItem('active_game_id')
@@ -74,6 +74,27 @@ function App() {
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [loadUserGames, user])
+
+  useEffect(() => {
+    if (!user) return undefined
+    let cancelled = false
+    void (async () => {
+      const res = await fetch(apiUrl(`/api/users/${user.user_id}`))
+      if (!res.ok || cancelled) return
+      const full = (await res.json()) as AuthUser
+      const next: AuthUser = {
+        user_id: full.user_id,
+        username: full.username,
+        game_ids: full.game_ids ?? [],
+      }
+      if (cancelled) return
+      setUser(next)
+      authStorage.setItem('gm_user', JSON.stringify(next))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user.user_id])
 
   useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
@@ -173,11 +194,59 @@ function App() {
                         setUser(null)
                         setActiveGameId(null)
                         setProfileOpen(false)
+                        setDeleteAccountConfirm(false)
                         navigate('home')
                       }}
                     >
                       Log out
                     </button>
+                    {!deleteAccountConfirm ? (
+                      <button
+                        type="button"
+                        className="profile-danger"
+                        onClick={() => setDeleteAccountConfirm(true)}
+                      >
+                        Delete account
+                      </button>
+                    ) : (
+                      <div className="profile-delete-confirm">
+                        <p className="profile-delete-warning">Delete forever? This removes your leagues membership and account data.</p>
+                        <div className="profile-delete-actions">
+                          <button
+                            type="button"
+                            className="profile-danger-solid"
+                            onClick={async () => {
+                              if (!user) return
+                              try {
+                                const res = await fetch(apiUrl(`/api/users/${user.user_id}`), { method: 'DELETE' })
+                                if (!res.ok) {
+                                  throw new Error(`Delete failed (HTTP ${res.status})`)
+                                }
+                                authStorage.removeItem('gm_user')
+                                authStorage.removeItem('active_game_id')
+                                setUserGames([])
+                                setUser(null)
+                                setActiveGameId(null)
+                                setProfileOpen(false)
+                                setDeleteAccountConfirm(false)
+                                navigate('home')
+                              } catch {
+                                setDeleteAccountConfirm(false)
+                              }
+                            }}
+                          >
+                            Yes, delete
+                          </button>
+                          <button
+                            type="button"
+                            className="glass-cta compact"
+                            onClick={() => setDeleteAccountConfirm(false)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

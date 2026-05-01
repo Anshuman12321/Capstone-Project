@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiUrl } from '../lib/api'
-
-type AuthUser = {
-  user_id: string
-  username: string
-}
+import type { AuthUser } from '../types'
 
 type Game = {
   game_id: string
@@ -33,12 +29,9 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(apiUrl('/api/games'))
+      const res = await fetch(apiUrl(`/api/users/${user.user_id}/games`))
       if (!res.ok) throw new Error(`Failed to load games (HTTP ${res.status})`)
-      const allGames = (await res.json()) as Game[]
-      const mine = allGames.filter(
-        (game) => game.owner_user_id === user.user_id || game.user_ids.includes(user.user_id),
-      )
+      const mine = (await res.json()) as Game[]
       setGames(mine)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load games')

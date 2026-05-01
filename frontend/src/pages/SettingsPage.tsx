@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiUrl } from '../lib/api'
-
-type AuthUser = {
-  user_id: string
-  username: string
-}
+import type { AuthUser } from '../types'
 
 type Game = {
   game_id: string

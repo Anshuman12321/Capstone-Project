@@ -1,6 +1,8 @@
 export type AuthUser = {
   user_id: string
   username: string
+  /** League IDs this user belongs to (from API; refreshed on login / profile). */
+  game_ids?: string[]
 }
 
 export type FantasyStanding = {

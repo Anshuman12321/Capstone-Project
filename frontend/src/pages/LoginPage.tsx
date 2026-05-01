@@ -5,6 +5,7 @@ import { apiUrl } from '../lib/api'
 type User = {
   user_id: string
   username: string
+  game_ids?: string[]
 }
 
 type LoginPageProps = {
