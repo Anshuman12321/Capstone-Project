@@ -6,11 +6,17 @@ try:
     from backend.app.api.routes.games import router as games_router
     from backend.app.api.routes.players import router as players_router
     from backend.app.api.routes.users import router as users_router
-except ModuleNotFoundError:
+    from backend.app.repos.store import STORE
+except ModuleNotFoundError as e:
+    # Only fall back when the *package* can't be found (running from backend/).
+    # If an inner import fails (e.g. missing dependency), surface the real error.
+    if getattr(e, "name", None) != "backend":
+        raise
     # When run from backend/ directory: `uvicorn main:app`
     from app.api.routes.games import router as games_router
     from app.api.routes.players import router as players_router
     from app.api.routes.users import router as users_router
+    from app.repos.store import STORE
 
 app = FastAPI(title="Capstone API")
 
@@ -38,6 +44,11 @@ def health():
 @app.get("/api/hello")
 def hello():
     return {"message": "Hello from FastAPI"}
+
+
+@app.on_event("startup")
+def _init_db() -> None:
+    STORE.init()
 
 
 app.include_router(users_router)
