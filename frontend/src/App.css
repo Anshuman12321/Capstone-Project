@@ -87,6 +87,95 @@
   position: relative;
 }
 
+.notifications-menu {
+  position: relative;
+}
+
+.notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(22rem, 85vw);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  background: #0f1c2c;
+  box-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.55);
+  z-index: 120;
+  overflow: hidden;
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.notifications-header p {
+  margin: 0;
+  color: #cec6ac;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notifications-header span {
+  border-radius: 999px;
+  background: #1e2b3b;
+  color: #ffe135;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+}
+
+.notifications-list {
+  max-height: 16rem;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.45rem;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: start;
+  border-radius: 0.4rem;
+  background: #132030;
+  padding: 0.55rem 0.55rem 0.55rem 0.7rem;
+}
+
+.notification-item p {
+  margin: 0;
+  color: #d6e4f9;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.notification-item button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  padding: 0.15rem;
+}
+
+.notification-item button:hover {
+  background: #1e2b3b;
+  color: #ffe135;
+}
+
+.notifications-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0.9rem 0.5rem;
+}
+
 .front-office-menu {
   position: relative;
 }
@@ -942,9 +1031,13 @@
 
 .draft-hero {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 1.5rem;
+}
+
+.draft-hero-headline {
+  max-width: 56rem;
 }
 
 .draft-hero h1,
@@ -964,7 +1057,7 @@
 }
 
 .draft-hero h1 {
-  font-size: clamp(2.75rem, 6vw, 5rem);
+  font-size: clamp(2.5rem, 5vw, 4rem);
 }
 
 .draft-hero p,
@@ -975,6 +1068,48 @@
   font-family: 'Newsreader', serif;
   font-size: 1.35rem;
   font-style: italic;
+}
+
+.draft-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.status-item {
+  border: 1px solid rgba(76, 71, 51, 0.15);
+  border-radius: 0.75rem;
+  background: #0f1c2c;
+  padding: 1rem 1.25rem;
+}
+
+.status-item p {
+  margin: 0 0 0.35rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.status-item strong {
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+}
+
+.status-item.timer strong {
+  color: #ffe135;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-item.draft-progress-action strong {
+  color: inherit;
+  font-variant-numeric: unset;
+}
+
+.status-item.draft-progress-action .primary-cta {
+  align-self: flex-start;
 }
 
 .draft-timer {
@@ -1033,8 +1168,9 @@
 
 .draft-grid {
   display: grid;
-  grid-template-columns: 0.8fr 1.6fr 1fr;
+  grid-template-columns: 1.8fr 1fr;
   gap: 1.5rem;
+  align-items: start;
 }
 
 .draft-feed h2,
@@ -1167,6 +1303,14 @@
   color: #94a3b8;
 }
 
+.featured-actions {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 0.6rem;
+  min-width: 14rem;
+}
+
 .prospect-stats,
 .stat-grid,
 .player-card-stats {
@@ -1251,7 +1395,31 @@
 
 .draft-settings {
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.draft-side-column {
+  display: grid;
+  gap: 1rem;
+}
+
+.settings-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0;
+}
+
+.settings-toggle .material-symbols-outlined {
+  color: #94a3b8;
 }
 
 .option-group {
@@ -1321,7 +1489,10 @@
 .queue-panel {
   display: grid;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+  border: 1px solid rgba(76, 71, 51, 0.15);
+  border-radius: 0.75rem;
+  background: #0f1c2c;
+  padding: 1rem 1.1rem;
 }
 
 .queue-panel p {
@@ -1334,10 +1505,139 @@
 
 .queue-panel div {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   border-radius: 0.5rem;
   background: rgba(6, 20, 35, 0.5);
   padding: 0.75rem;
+}
+
+.draft-feed {
+  border: 1px solid rgba(76, 71, 51, 0.15);
+  border-radius: 0.75rem;
+  background: #0f1c2c;
+  padding: 1.25rem;
+}
+
+.cap-space-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.cap-space-hero h1 {
+  margin: 0;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+
+.cap-space-hero p {
+  margin: 0.5rem 0 0;
+  color: #94a3b8;
+  font-family: 'Newsreader', serif;
+  font-size: 1.2rem;
+  font-style: italic;
+}
+
+.cap-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.cap-summary-card {
+  border: 1px solid rgba(76, 71, 51, 0.15);
+  border-radius: 0.75rem;
+  background: #0f1c2c;
+  padding: 1rem 1.2rem;
+}
+
+.cap-summary-card p {
+  margin: 0 0 0.45rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cap-summary-card strong {
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.cap-summary-card .positive {
+  color: #86efac;
+}
+
+.cap-summary-card .negative {
+  color: #fca5a5;
+}
+
+.cap-space-grid {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 1rem;
+}
+
+.cap-contracts-card,
+.cap-obligations-card {
+  border: 1px solid rgba(76, 71, 51, 0.15);
+  border-radius: 0.75rem;
+  background: #0f1c2c;
+  padding: 1.25rem;
+}
+
+.cap-contract-list,
+.cap-obligation-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cap-contract-row {
+  display: grid;
+  grid-template-columns: 1.6fr auto auto;
+  gap: 1rem;
+  border-radius: 0.6rem;
+  background: #132030;
+  padding: 0.85rem 1rem;
+}
+
+.cap-contract-row p,
+.cap-obligation-list p {
+  margin: 0;
+  color: #fff;
+  font-weight: 700;
+}
+
+.cap-contract-row small,
+.cap-obligation-list small {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.cap-obligation-list article {
+  border-radius: 0.6rem;
+  background: #132030;
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.cap-obligation-list strong {
+  color: #fde68a;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+}
+
+.cap-obligation-list strong.positive {
+  color: #86efac;
 }
 
 .standings-empty {
@@ -1885,7 +2185,12 @@
 
 @media (max-width: 1100px) {
   .draft-grid,
-  .league-grid {
+  .league-grid,
+  .cap-space-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cap-summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1946,6 +2251,7 @@
   }
 
   .draft-hero,
+  .draft-status-strip,
   .draft-timer,
   .board-head,
   .section-head,
@@ -1953,6 +2259,10 @@
   .game-row > div {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .draft-status-strip {
+    grid-template-columns: 1fr;
   }
 
   .timer-rule,
@@ -1973,7 +2283,8 @@
   .prospect-stats,
   .stat-grid,
   .rotation-grid,
-  .player-card-stats {
+  .player-card-stats,
+  .cap-contract-row {
     grid-template-columns: 1fr;
   }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiUrl } from '../lib/api'
+import { authStorage } from '../lib/storage'
 
 type HelloResponse = { message: string }
 
@@ -7,6 +8,8 @@ export function HomePage() {
   const [data, setData] = useState<HelloResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const primaryCtaHref = authStorage.getItem('gm_user') ? '#/games' : '#/login'
+  const isLoggedIn = primaryCtaHref === '#/games'
 
   useEffect(() => {
     let cancelled = false
@@ -54,14 +57,13 @@ export function HomePage() {
             Step into the war room. Experience a sophisticated fantasy basketball front-office
             simulation built for draft strategy, roster control, and league dominance.
           </p>
-          <div className="flex flex-wrap gap-4">
-            <a className="primary-cta" href="#/login">
-              Join League
-            </a>
-            <a className="glass-cta" href="#/login">
-              View Demo
-            </a>
-          </div>
+          {!isLoggedIn && (
+            <div className="flex flex-wrap gap-4">
+              <a className="primary-cta" href={primaryCtaHref}>
+                Join League
+              </a>
+            </div>
+          )}
           <div className="backend-card glass-panel">
             <span className="material-symbols-outlined text-primary-container">dns</span>
             {loading && <p>Checking FastAPI backend...</p>}
@@ -142,22 +144,22 @@ export function HomePage() {
           Ready to Take <span>Control</span>?
         </h2>
         <p>The next draft starts soon. Secure your franchise spot and begin your legacy.</p>
-        <a href="#/login">
+        <a href={primaryCtaHref}>
           <span>Start Your Franchise</span>
           <span className="material-symbols-outlined">arrow_forward</span>
         </a>
       </section>
 
       <nav className="mobile-tabbar" aria-label="Mobile navigation">
-        <a href="#/login">
+        <a href={primaryCtaHref}>
           <span className="material-symbols-outlined">strategy</span>
           Draft
         </a>
-        <a href="#/login">
+        <a href={primaryCtaHref}>
           <span className="material-symbols-outlined">leaderboard</span>
           League
         </a>
-        <a href="#/login">
+        <a href={primaryCtaHref}>
           <span className="material-symbols-outlined">groups</span>
           Team
         </a>

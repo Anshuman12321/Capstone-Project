@@ -2,6 +2,7 @@ import type { AppRoute } from './useHashRoute'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiUrl } from './lib/api'
 import { useHashRoute } from './useHashRoute'
+import { CapSpacePage } from './pages/CapSpacePage'
 import { DraftPage } from './pages/DraftPage'
 import { GamesPage } from './pages/GamesPage'
 import { HomePage } from './pages/HomePage'
@@ -17,7 +18,7 @@ const sideNav: { route: AppRoute; label: string; icon: string }[] = [
   { route: 'draft', label: 'Dashboard', icon: 'dashboard' },
   { route: 'team', label: 'Scouting', icon: 'person_search' },
   { route: 'standings', label: 'Standings', icon: 'leaderboard' },
-  { route: 'team', label: 'Cap Space', icon: 'payments' },
+  { route: 'cap-space', label: 'Cap Space', icon: 'payments' },
   { route: 'settings', label: 'Settings', icon: 'settings' },
 ]
 
@@ -38,14 +39,32 @@ function App() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false)
   const [officeOpen, setOfficeOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState([
+    { id: 'n1', text: 'League invite pending from Midtown Ballers.' },
+    { id: 'n2', text: 'Trade window opens in 3 hours.' },
+    { id: 'n3', text: 'Your next draft pick is projected at #14.' },
+    { id: 'n4', text: 'Commissioner posted a new league announcement.' },
+  ])
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
   const officeMenuRef = useRef<HTMLDivElement | null>(null)
+  const notificationsMenuRef = useRef<HTMLDivElement | null>(null)
   const isLoggedIn = Boolean(user)
-  const isProtectedRoute = route === 'draft' || route === 'team' || route === 'standings' || route === 'settings'
+  const isProtectedRoute =
+    route === 'draft' || route === 'team' || route === 'standings' || route === 'cap-space' || route === 'settings'
   const hasActiveGame = Boolean(activeGameId)
   const activeGame = userGames.find((game) => game.game_id === activeGameId) ?? null
   const showSidebar = isLoggedIn && hasActiveGame && route !== 'home' && route !== 'login' && route !== 'games'
-  const activeSideLabel = route === 'draft' ? 'Dashboard' : route === 'settings' ? 'Settings' : route === 'team' ? 'Scouting' : 'Standings'
+  const activeSideLabel =
+    route === 'draft'
+      ? 'Dashboard'
+      : route === 'team'
+        ? 'Scouting'
+        : route === 'standings'
+          ? 'Standings'
+          : route === 'cap-space'
+            ? 'Cap Space'
+            : 'Settings'
   const gmInitials = useMemo(() => {
     if (!user) return 'GM'
     return user.username
@@ -106,6 +125,10 @@ function App() {
       if (!officeMenuRef.current.contains(event.target as Node)) {
         setOfficeOpen(false)
       }
+      if (!notificationsMenuRef.current) return
+      if (!notificationsMenuRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false)
+      }
     }
     document.addEventListener('click', onClickOutside)
     return () => document.removeEventListener('click', onClickOutside)
@@ -113,7 +136,7 @@ function App() {
 
   const handleProtectedNavigate = (targetRoute: AppRoute) => {
     if (!isLoggedIn) {
-      navigate('login')
+      navigate('home')
       return
     }
     if (targetRoute !== 'games' && !hasActiveGame) {
@@ -153,8 +176,12 @@ function App() {
                 >
                   Dashboard
                 </button>
-                <button type="button" className="top-nav-link" onClick={() => navigate('games')}>
-                  Join/Create League
+                <button
+                  type="button"
+                  className={route === 'games' ? 'top-nav-link active' : 'top-nav-link'}
+                  onClick={() => navigate('games')}
+                >
+                  View Leagues
                 </button>
               </>
             )}
@@ -162,12 +189,39 @@ function App() {
         </div>
 
         <div className="flex items-center gap-4 md:gap-6">
-          <button type="button" className="material-symbols-outlined header-icon" aria-label="Analytics">
-            analytics
-          </button>
-          <button type="button" className="material-symbols-outlined header-icon" aria-label="Notifications">
-            notifications
-          </button>
+          <div className="notifications-menu" ref={notificationsMenuRef}>
+            <button
+              type="button"
+              className="material-symbols-outlined header-icon"
+              aria-label="Notifications"
+              onClick={() => setNotificationsOpen((prev) => !prev)}
+            >
+              notifications
+            </button>
+            {notificationsOpen && (
+              <div className="notifications-dropdown" role="dialog" aria-label="Notifications">
+                <div className="notifications-header">
+                  <p>Notifications</p>
+                  <span>{notifications.length}</span>
+                </div>
+                <div className="notifications-list">
+                  {notifications.length === 0 && <p className="notifications-empty">No new notifications.</p>}
+                  {notifications.map((item) => (
+                    <article key={item.id} className="notification-item">
+                      <p>{item.text}</p>
+                      <button
+                        type="button"
+                        aria-label="Delete notification"
+                        onClick={() => setNotifications((prev) => prev.filter((existing) => existing.id !== item.id))}
+                      >
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="profile-menu" ref={profileMenuRef}>
             {!isLoggedIn ? (
               <button type="button" className="glass-cta compact" onClick={() => navigate('login')}>
@@ -308,10 +362,6 @@ function App() {
                   {label}
                 </button>
               ))}
-              <button type="button" className="side-nav-link" onClick={() => navigate('home')}>
-                <span className="material-symbols-outlined">home</span>
-                Home
-              </button>
             </nav>
 
             <div className="px-4 mt-auto">
@@ -359,16 +409,7 @@ function App() {
             />
           )}
           {!isLoggedIn && isProtectedRoute && (
-            <LoginPage
-              requireAuthMessage="Log in to access dashboard features."
-              onLogin={(nextUser) => {
-                authStorage.setItem('gm_user', JSON.stringify(nextUser))
-                setUser(nextUser)
-                void loadUserGames(nextUser)
-                navigate('games')
-              }}
-              onCancel={() => navigate('home')}
-            />
+            <HomePage />
           )}
           {isLoggedIn && !hasActiveGame && isProtectedRoute && user && (
             <GamesPage
@@ -385,7 +426,10 @@ function App() {
             <DraftPage activeGame={activeGame} onGameUpdated={handleGameUpdated} />
           )}
           {isLoggedIn && hasActiveGame && route === 'team' && <TeamPage />}
-          {isLoggedIn && hasActiveGame && route === 'standings' && activeGame && <StandingsPage activeGame={activeGame} user={user} />}
+          {isLoggedIn && hasActiveGame && route === 'standings' && activeGame && (
+            <StandingsPage activeGame={activeGame} user={user} />
+          )}
+          {isLoggedIn && hasActiveGame && route === 'cap-space' && <CapSpacePage />}
           {isLoggedIn && hasActiveGame && route === 'settings' && user && activeGame && (
             <SettingsPage
               user={user}

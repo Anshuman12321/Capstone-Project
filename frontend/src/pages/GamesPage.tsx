@@ -56,7 +56,7 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
   const handleCreateGame = async () => {
     const trimmedName = gameName.trim()
     if (!trimmedName) {
-      setError('Game name is required.')
+      setError('League name is required.')
       return
     }
 
@@ -68,7 +68,7 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ owner_user_id: user.user_id, name: trimmedName }),
       })
-      if (!createRes.ok) throw new Error(`Failed to create game (HTTP ${createRes.status})`)
+      if (!createRes.ok) throw new Error(`Failed to create league (HTTP ${createRes.status})`)
       const created = (await createRes.json()) as Game
 
       const joinRes = await fetch(apiUrl(`/api/games/${created.game_id}/join`), {
@@ -76,12 +76,12 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.user_id }),
       })
-      if (!joinRes.ok) throw new Error(`Failed to join game (HTTP ${joinRes.status})`)
+      if (!joinRes.ok) throw new Error(`Failed to join league (HTTP ${joinRes.status})`)
       closeModal()
       onGamesChanged?.()
       onSelectGame(created.game_id)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Create game failed')
+      setError(e instanceof Error ? e.message : 'Create league failed')
     } finally {
       setCreating(false)
       void loadGames()
@@ -91,7 +91,7 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
   const handleJoinGame = async () => {
     const gameId = joinGameId.trim()
     if (!gameId) {
-      setError('Game ID is required.')
+      setError('League ID is required.')
       return
     }
     setCreating(true)
@@ -104,15 +104,15 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
       })
       if (!joinRes.ok) {
         if (joinRes.status === 404) {
-          throw new Error('Game not found for that ID.')
+          throw new Error('League not found for that ID.')
         }
-        throw new Error(`Failed to join game (HTTP ${joinRes.status})`)
+        throw new Error(`Failed to join league (HTTP ${joinRes.status})`)
       }
       closeModal()
       onGamesChanged?.()
       onSelectGame(gameId)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Join game failed')
+      setError(e instanceof Error ? e.message : 'Join league failed')
     } finally {
       setCreating(false)
       void loadGames()
@@ -124,8 +124,8 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
       <div className="games-header">
         <div>
           <p className="section-kicker">Your Leagues</p>
-          <h1>Games</h1>
-          <p>Create a game or jump back into one of your active leagues.</p>
+          <h1>Leagues</h1>
+          <p>Create a league or jump back into one of your active leagues.</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <button
@@ -137,7 +137,7 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
             }}
             disabled={creating}
           >
-            Join Game
+            Join League
           </button>
           <button
             type="button"
@@ -148,13 +148,13 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
             }}
             disabled={creating}
           >
-            {creating ? 'Working...' : 'Create Game'}
+            {creating ? 'Working...' : 'Create League'}
           </button>
         </div>
       </div>
 
       {error && <p className="login-error">{error}</p>}
-      {loading && <p>Loading your games...</p>}
+      {loading && <p>Loading your leagues...</p>}
 
       {!loading && games.length === 0 && (
         <div className="glass-panel games-empty">
@@ -188,9 +188,9 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
 
             {modal === 'create' && (
               <>
-                <h2>Create Game</h2>
-                <p>Name your new league. You can add more game options here later.</p>
-                <label htmlFor="create-game-name">Game Name</label>
+                <h2>Create League</h2>
+                <p>Name your new league. You can add more league options here later.</p>
+                <label htmlFor="create-game-name">League Name</label>
                 <input
                   id="create-game-name"
                   value={gameName}
@@ -211,9 +211,9 @@ export function GamesPage({ user, onSelectGame, onGamesChanged }: GamesPageProps
 
             {modal === 'join' && (
               <>
-                <h2>Join Game</h2>
-                <p>Enter a game ID from another manager to join their league.</p>
-                <label htmlFor="join-game-id">Game ID</label>
+                <h2>Join League</h2>
+                <p>Enter a league ID from another manager to join their league.</p>
+                <label htmlFor="join-game-id">League ID</label>
                 <input
                   id="join-game-id"
                   value={joinGameId}

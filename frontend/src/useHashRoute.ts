@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-export type AppRoute = 'home' | 'login' | 'games' | 'draft' | 'team' | 'standings' | 'settings'
+export type AppRoute = 'home' | 'login' | 'games' | 'draft' | 'team' | 'standings' | 'cap-space' | 'settings'
 
 function pathToRoute(hash: string): AppRoute {
   const path = (hash.startsWith('#') ? hash.slice(1) : hash) || '/'
@@ -8,6 +8,7 @@ function pathToRoute(hash: string): AppRoute {
   if (seg === 'draft') return 'draft'
   if (seg === 'team') return 'team'
   if (seg === 'standings') return 'standings'
+  if (seg === 'cap-space') return 'cap-space'
   if (seg === 'login') return 'login'
   if (seg === 'games') return 'games'
   if (seg === 'settings') return 'settings'

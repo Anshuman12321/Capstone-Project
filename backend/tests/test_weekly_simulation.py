@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from backend.app.services import game_service as game_service_module
 from backend.app.models.player import Player, PlayerPosition
 from backend.app.models.user import User
 from backend.app.repos.in_memory import STORE
@@ -15,7 +16,8 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 
 @pytest.fixture(autouse=True)
-def reset_store():
+def reset_store(monkeypatch):
+    monkeypatch.setattr(game_service_module, "STORE", STORE)
     STORE.reset()
     yield
     STORE.reset()

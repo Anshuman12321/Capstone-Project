@@ -170,6 +170,9 @@ class GameService:
                 "updated_at": datetime.now(timezone.utc),
             }
         )
+        if hasattr(STORE, "save_game"):
+            return STORE.save_game(next_game)
+
         # Save next_game using remote db approach
         STORE.advance_week(game_id, emitted_events=sim_result.events)
         # After advancing in remote db, refetch the latest version to ensure source of truth

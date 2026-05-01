@@ -113,7 +113,7 @@ export function SettingsPage({ user, game, onLeftLeague, onDeletedLeague }: Sett
       <div className="glass-panel settings-card">
         <h1>League Settings</h1>
         <p className="settings-subtle">League: {game.name}</p>
-        <p className="settings-subtle">Game ID: {game.game_id}</p>
+        <p className="settings-subtle">League ID: {game.game_id}</p>
       </div>
 
       {error && <p className="login-error">{error}</p>}
@@ -124,9 +124,11 @@ export function SettingsPage({ user, game, onLeftLeague, onDeletedLeague }: Sett
             Delete League
           </button>
         )}
-        <button type="button" className="primary-cta compact" onClick={handleLeaveGame} disabled={loading}>
-          {loading ? 'Working...' : 'Leave Game'}
-        </button>
+        {!isOwner && (
+          <button type="button" className="primary-cta compact" onClick={handleLeaveGame} disabled={loading}>
+            {loading ? 'Working...' : 'Leave League'}
+          </button>
+        )}
       </div>
 
       {isOwner && (
