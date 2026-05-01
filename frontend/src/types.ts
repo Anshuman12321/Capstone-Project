@@ -39,6 +39,7 @@ export type Game = {
   owner_user_id: string | null
   user_ids: string[]
   teams_by_user_id: Record<string, Team>
+  drafted_player_ids: string[]
   standings: Record<string, FantasyStanding>
   simulation_events: SimulationEvent[]
 }

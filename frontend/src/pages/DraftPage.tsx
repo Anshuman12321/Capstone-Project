@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiUrl } from '../lib/api'
 import { draftBoard } from '../mockData'
-import type { Game } from '../types'
+import type { AuthUser, Game } from '../types'
 
 type DraftType = 'snake' | 'linear'
 
 type DraftPageProps = {
   activeGame: Game
+  user: AuthUser
   onGameUpdated: (game: Game) => void
 }
 
-export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
+type SortKey = 'pts_per_game' | 'trb_per_game' | 'ast_per_game' | 'name'
+
+type Player = {
+  player_id: string
+  full_name: string
+  position: string
+  real_team: string | null
+  stats: Record<string, string | number>
+}
+
+export function DraftPage({ activeGame, user, onGameUpdated }: DraftPageProps) {
   const [draftType, setDraftType] = useState<DraftType>('snake')
   const [rounds, setRounds] = useState(15)
   const [secondsPerPick, setSecondsPerPick] = useState(90)
@@ -18,10 +29,77 @@ export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
   const [progressing, setProgressing] = useState(false)
   const [progressMessage, setProgressMessage] = useState<string | null>(null)
   const [progressError, setProgressError] = useState<string | null>(null)
+  const [players, setPlayers] = useState<Player[]>([])
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('pts_per_game')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [loadingPlayers, setLoadingPlayers] = useState(false)
+  const [draftingPlayerId, setDraftingPlayerId] = useState<string | null>(null)
+  const [draftError, setDraftError] = useState<string | null>(null)
 
   const featuredPlayer = draftBoard[0]
   const queuedPlayers = draftBoard.slice(1, 5)
   const recentActivity = draftBoard.slice(0, 4)
+
+  const loadPlayers = async () => {
+    setLoadingPlayers(true)
+    try {
+      const params = new URLSearchParams()
+      if (search.trim()) params.set('q', search.trim())
+      params.set('sort', sortKey)
+      params.set('direction', sortDir)
+      params.set('limit', '200')
+      params.set('offset', '0')
+      const res = await fetch(apiUrl(`/api/players?${params.toString()}`))
+      if (!res.ok) throw new Error(`Failed to load players (HTTP ${res.status})`)
+      const data = (await res.json()) as Player[]
+      setPlayers(data)
+    } finally {
+      setLoadingPlayers(false)
+    }
+  }
+
+  useEffect(() => {
+    const t = window.setTimeout(() => void loadPlayers(), 150)
+    return () => window.clearTimeout(t)
+  }, [activeGame.game_id, search, sortKey, sortDir])
+
+  const draftSelected = async (playerId: string) => {
+    setDraftError(null)
+    setDraftingPlayerId(playerId)
+    try {
+      if (activeGame.status !== 'drafting') {
+        throw new Error('Draft has not started yet.')
+      }
+      const res = await fetch(apiUrl(`/api/games/${activeGame.game_id}/draft/pick`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, player_id: playerId }),
+      })
+      if (!res.ok) {
+        let message = `Draft failed (HTTP ${res.status})`
+        try {
+          const body = (await res.json()) as { detail?: string }
+          if (body.detail) message = body.detail
+        } catch {
+          // ignore
+        }
+        throw new Error(message)
+      }
+      const updated = (await res.json()) as Game
+      onGameUpdated(updated)
+      setProgressMessage('Draft pick submitted.')
+    } catch (e: unknown) {
+      setDraftError(e instanceof Error ? e.message : 'Draft failed')
+    } finally {
+      setDraftingPlayerId(null)
+    }
+  }
+
+  const availablePlayers = useMemo(() => {
+    const drafted = new Set(activeGame.drafted_player_ids ?? [])
+    return players.filter((p) => !drafted.has(p.player_id))
+  }, [players, activeGame.drafted_player_ids])
 
   const fantasyMatchups = activeGame.simulation_events.filter(
     (event) => event.type === 'game_outcome' && event.payload.kind === 'fantasy_matchup',
@@ -56,6 +134,79 @@ export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
     }
   }
 
+  const isOwner = activeGame.owner_user_id === user.user_id
+
+  const handleTopAction = async () => {
+    setProgressing(true)
+    setProgressMessage(null)
+    setProgressError(null)
+    setDraftError(null)
+    try {
+      if (activeGame.status === 'lobby') {
+        if (!isOwner) {
+          throw new Error('Only the league owner can start the draft.')
+        }
+        const res = await fetch(apiUrl(`/api/games/${activeGame.game_id}/draft/start`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner_user_id: user.user_id }),
+        })
+        if (!res.ok) {
+          let message = `Failed to start draft (HTTP ${res.status})`
+          try {
+            const body = (await res.json()) as { detail?: string }
+            if (body.detail) message = body.detail
+          } catch {
+            // ignore
+          }
+          throw new Error(message)
+        }
+        const updated = (await res.json()) as Game
+        onGameUpdated(updated)
+        setProgressMessage('Draft started.')
+        return
+      }
+
+      if (activeGame.status === 'drafting') {
+        if (!isOwner) {
+          throw new Error('Only the league owner can cancel the draft.')
+        }
+        const res = await fetch(apiUrl(`/api/games/${activeGame.game_id}/draft/cancel`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner_user_id: user.user_id }),
+        })
+        if (!res.ok) {
+          let message = `Failed to cancel draft (HTTP ${res.status})`
+          try {
+            const body = (await res.json()) as { detail?: string }
+            if (body.detail) message = body.detail
+          } catch {
+            // ignore
+          }
+          throw new Error(message)
+        }
+        const updated = (await res.json()) as Game
+        onGameUpdated(updated)
+        setProgressMessage('Draft cancelled.')
+        return
+      }
+
+      await handleProgressWeek()
+    } catch (e: unknown) {
+      setProgressError(e instanceof Error ? e.message : 'Action failed')
+    } finally {
+      setProgressing(false)
+    }
+  }
+
+  const topActionLabel =
+    activeGame.status === 'lobby'
+      ? 'Start draft'
+      : activeGame.status === 'drafting'
+        ? 'Cancel draft'
+        : 'Simulate week'
+
   const statusLabel = activeGame.status.replace('_', ' ')
 
   return (
@@ -86,9 +237,9 @@ export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
           </strong>
         </article>
         <article className="status-item draft-progress-action">
-          <p>Simulation</p>
-          <button type="button" className="primary-cta compact" onClick={handleProgressWeek} disabled={progressing}>
-            {progressing ? 'Progressing...' : 'Progress week'}
+          <p>{activeGame.status === 'drafting' ? 'Draft' : 'League'}</p>
+          <button type="button" className="primary-cta compact" onClick={handleTopAction} disabled={progressing}>
+            {progressing ? 'Working...' : topActionLabel}
           </button>
         </article>
       </section>
@@ -97,6 +248,7 @@ export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
         <section className="week-progress-panel glass-panel">
           {progressMessage && <p className="week-progress-success">{progressMessage}</p>}
           {progressError && <p className="login-error">{progressError}</p>}
+          {draftError && <p className="login-error">{draftError}</p>}
         </section>
       )}
 
@@ -135,8 +287,28 @@ export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
             <h2>Available players</h2>
             <div className="board-search">
               <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search players" type="text" />
+              <input placeholder="Search players" type="text" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
+          </div>
+
+          <div className="board-controls">
+            <label>
+              Sort
+              <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
+                <option value="pts_per_game">PTS</option>
+                <option value="trb_per_game">REB</option>
+                <option value="ast_per_game">AST</option>
+                <option value="name">Name</option>
+              </select>
+            </label>
+            <label>
+              Dir
+              <select value={sortDir} onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}>
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+            {loadingPlayers && <small>Loading…</small>}
           </div>
 
           {featuredPlayer && (
@@ -178,18 +350,23 @@ export function DraftPage({ activeGame, onGameUpdated }: DraftPageProps) {
           )}
 
           <div className="prospect-list">
-            {draftBoard.map((p) => (
-              <article key={p.name} className="prospect-row">
-                <span className="rank">{p.rank}</span>
+            {availablePlayers.map((p, idx) => (
+              <article key={p.player_id} className="prospect-row">
+                <span className="rank">{String(idx + 1).padStart(2, '0')}</span>
                 <div>
-                  <p>{p.name}</p>
+                  <p>{p.full_name}</p>
                   <small>
-                    {p.team} · ADP {p.adp.toFixed(1)}
+                    {p.real_team ?? '—'} · PTS {Number(p.stats.pts_per_game ?? 0).toFixed(1)}
                   </small>
                 </div>
-                <span className={`pos pos-${p.pos}`}>{p.pos}</span>
-                <button type="button" className="queue-button">
-                  Queue
+                <span className={`pos pos-${p.position}`}>{p.position}</span>
+                <button
+                  type="button"
+                  className="queue-button"
+                  disabled={Boolean(draftingPlayerId)}
+                  onClick={() => void draftSelected(p.player_id)}
+                >
+                  {draftingPlayerId === p.player_id ? 'Drafting…' : 'Draft'}
                 </button>
               </article>
             ))}

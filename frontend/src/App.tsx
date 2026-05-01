@@ -113,7 +113,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [user.user_id])
+  }, [user?.user_id])
 
   useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
@@ -422,8 +422,8 @@ function App() {
               }}
             />
           )}
-          {isLoggedIn && hasActiveGame && route === 'draft' && activeGame && (
-            <DraftPage activeGame={activeGame} onGameUpdated={handleGameUpdated} />
+          {isLoggedIn && hasActiveGame && route === 'draft' && activeGame && user && (
+            <DraftPage activeGame={activeGame} user={user} onGameUpdated={handleGameUpdated} />
           )}
           {isLoggedIn && hasActiveGame && route === 'team' && <TeamPage />}
           {isLoggedIn && hasActiveGame && route === 'standings' && activeGame && (
